@@ -1,8 +1,8 @@
 # PreprocessingHTR
 
-This pre-processing system takes the image of a handwritten page and returns cleaned images of individual words. One such application of this is that the word images can be fed into Handwritten Text Recognition (HTR) systems, which often accept individual words.
+This pre-processing system takes an image of a handwritten page and returns cleaned images of individual words. One such application of this is that the word images can be fed into Handwritten Text Recognition (HTR) systems, which often accept individual words.
 
-This pre-processing prepares images for the [SimpleHTR](https://github.com/githubharald/SimpleHTR) system due to the way it prepares the final word images, however it is easily modifiable for other systems.
+This pre-processing specifically prepares images for the [SimpleHTR](https://github.com/githubharald/SimpleHTR) system, mostly due to the way it prepares the final word images. However, this pre-processing is easily applicable to other HTR systems.
 
 ![img](doc/w11.jpg)
 
@@ -19,10 +19,10 @@ This pre-processing prepares images for the [SimpleHTR](https://github.com/githu
 
 This work relies on a few key assumptions in order to function well:
 
-* The input image is of a full, standard piece of paper with visible borders
+* The input image is of a full, straight, standard piece of paper with visible borders
 * Text is written horizontally in non-overlapping lines
 * Text height is fairly uniform across all lines
-* Lighting conditions are acceptable - not too dark or too much glare
+* Lighting conditions are acceptable (not too dark or too much glare)
 
 ## Pre-processing Walkthrough
 
@@ -37,9 +37,9 @@ This is the original image fed into the program. Ideally, this image should be o
 
 The first pre-processing step is to border the page.
 
-This can be done fairly simply using `cv2.findContours` and by detecting the largest contour whose approximate shape is a square  (using `cv2.approxPolyDP`). Then, we can create an approximate rectangle from that contour and crop to it. The disadvantage to this method is that, if the page is not straight, either will the crop.
+This can be done fairly simply using `cv2.findContours` and detecting the largest contour whose approximate shape is a square  (using `cv2.approxPolyDP`). Then, we can create an approximate rectangle from that contour and crop to it. The disadvantage to this method is that, if the page is not straight, then neither will the crop.
 
-An alternative method is the `four_point_transform` from `imutils.perspective`, which actually transofrm the page to be straight while cropping it, however, because this sometimes leaves the paper warped, it is preferred  to simply use the first method.
+An alternative method is the `four_point_transform` from `imutils.perspective`, which actually transofrms the page to be straight while cropping it, however, because this sometimes leaves the paper warped, it is preferred  to simply use the first method.
 
 ![bordered](doc/1bordered.jpg)
 
@@ -48,7 +48,7 @@ An alternative method is the `four_point_transform` from `imutils.perspective`, 
 
 To ensure that `cv2.canny` is as clean as possible, any page holes must be removed. This can be done with `cv2.SimpleBlobDetector`, which can detect approximate circles, and page holes with the right parameters.
 
-To make the transition as smooth as possible, evenly-spaced points around the circled are sampled for color, those samples are averaged, and the hole is filled with this color. Then, the immediate area around the hole is blurred so that `cv2.canny` won't pick up much transition.
+To make the transition as smooth as possible, evenly-spaced points around the circled are sampled for color, those colors are averaged, and the hole is filled with this average. Then, the immediate area around the hole is blurred so that `cv2.canny` won't pick up much transition.
 
 ![circles_removed](doc/2circles_removed.jpg)
 
@@ -76,7 +76,7 @@ Finally, apply `cv2.canny` to get the edges in the image, which is the a good wa
 
 ## Dilated edges
 
-Perform dilation on canny, which yielded better results in practice (and is also better for visualization).
+Perform dilation on canny, which yields better results in practice (and is also better for visualization).
 
 ![dilated](./doc/7dilated.jpg)
 
@@ -115,7 +115,7 @@ Filtering is done for lines with too little area to contain text.
 
 Once we've separated the document into lines, we must segment it into words. Currently, there are two methods being used to separate lines.
 
-The first can be seen in the below images as the blue, vertical divider. It is based on taking column sums of the image's pixel values, finding gaps of values (i.e. runs of near 0) and classifying a gap as a space is large enough. This is no simple task, since gaps within some words are larger than the gaps between words - take the " 's " in "Valentine's", which was incorrectly identified as a space.
+The first can be seen in the below images as the blue, vertical divider. It is based on taking column sums of the image's pixel values, finding gaps of values (i.e. runs of near 0) and classifying a gap as a space that is 'large enough'. This is no simple task, since gaps within some words are larger than the gaps between words - take the " 's " in "Valentine's", which was incorrectly identified as a space.
 
 The second method can be seen in the below images as the green divider, and was inspired by the fact that some vertical gaps are made very small (or non-existent) due to slanted lettering. This addresses this short-coming of the first method, and in general, this method is better, however it does miss some spaces, as in the 5th line between 'Today' and 'is'.
 
@@ -136,7 +136,7 @@ Currently, once individual words are segmented, they are thresholded and re-colo
 
 One issue with the model is that it will fail without warning on some images, which can be mitigated by using different thresholding methods for some reason.
 
-In general, OTSU produces cleaner images, as seen with 'Today'. However, it is more suspectible to shadows and highlights than mean thresholding (given a good threshold value), as is the case with 'remember'.
+In general, OTSU produces cleaner images, as seen with 'Today'. However, it is more suspectible to images with partial shadows and highlights than mean thresholding, as is the case with 'remember'.
 
 Though not currently implemented, it might be possible to distinguish between the cleaner version of each threshold. For the reasons described above, if the pixel count in OTSU thresholded is comparable (probably slightly lower) to that in the mean thresholded, use OTSU. However, if mean thresholded has significantly less pixels, use this image.
 
