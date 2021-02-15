@@ -16,7 +16,7 @@ def clustering(data, maxgap):
     return groups, indices
 
 # Clusters objects into horizontal lines
-def line_clustering(components):#y, cX, cY, c_area, boundingRect, allowed_area, output, display_borders, display_img):
+def line_clustering(components):
 
     # Get top k areas
     top_k_vals = min([10, len(components)])
