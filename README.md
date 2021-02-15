@@ -3,6 +3,8 @@ Pre-processing handwritten pages into words for Handwritten Text Recognition (HT
 
 Pre-processing system takes the image of a full, handwritten page and returns cleaned images of individual words. These individual word images can then be fed into a Handwritten Text Recognition (HTR) system, which often prefers individual words.
 
+![img](doc/w11.jpg)
+
 ## Run pre-processing
 ```
 > python main.py test.jpg --save processed
@@ -13,28 +15,73 @@ Pre-processing system takes the image of a full, handwritten page and returns cl
 * `--predict`: a boolean representing whether to predict the images when calling demo - not currently implemented.
 
 
+## Pre-processing Walkthrough
+
+## Original image
+
+![img](doc/0img.jpg)
+
+## Bordered image
+
+![bordered](doc/1bordered.jpg)
+
+## Page holes removed
+
+![circles_removed](doc/2circles_removed.jpg)
+
+## Lines removed
+
+![lines_removed](./doc/3lines_removed.jpg)
+
+## Grayscale
+
+![gray](./doc/4gray.jpg)
+
+## Blurred
+
+![blurred](./doc/5blurred.jpg)
+
+## Edges
+
+![edges](./doc/6edges.jpg)
+
+## Dilated edges
+
+![dilated](./doc/7dilated.jpg)
+
+## Connected components
+
+![components](./doc/8components.jpg)
+
+## Connected components filtered
+
+![components_filtered](./doc/9components_filtered.jpg)
+
+## Connected component borders
+
+![components_borders](./doc/10components_borders.jpg)
+
+## Text lines
+
+![lines_img](./doc/11lines_img.jpg)
 
 
-![img](./doc/0img.png)
+## Individual text lines
 
-![bordered](./doc/1bordered.png)
+![lines0](./doc/line0.jpg)
+![lines1](./doc/line1.jpg)
+![lines2](./doc/line2.jpg)
+![lines3](./doc/line3.jpg)
+![lines4](./doc/line4.jpg)
+![lines5](./doc/line5.jpg)
+![lines6](./doc/line6.jpg)
 
-![circles_removed](./doc/2circles_removed.png)
 
-![lines_removed](./doc/3lines_removed.png)
+## Individual words
 
-![gray](./doc/4gray.png)
 
-![blurred](./doc/5blurred.png)
 
-![edges](./doc/6edges.png)
 
-![dilated](./doc/7dilated.png)
+## Short-comings
 
-![components](./doc/8components.png)
-
-![components_filtered](./doc/9components_filtered.png)
-
-![components_borders](./doc/10components_borders.png)
-
-![lines_img](./doc/11lines_img.png)
+Colored pen could be detected and extracted much more easily than pencil, however this isn't currently being taken advantage of.

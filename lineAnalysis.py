@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 import math
-import matplotlib.pyplot as plt
 
 def zero_runs(a):
     # Create an array that is 1 where a is 0, and pad each end with an extra 0.
