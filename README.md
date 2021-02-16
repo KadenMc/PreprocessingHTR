@@ -157,14 +157,16 @@ Mean Threshold
 ![img](doc/w22.jpg)
 
 
-## Future Changes
+## Current Shortcomings & Future Improvements
 
 * Raw word images: Provide the option to get back raw word images rather than those doctored for the [SimpleHTR](https://github.com/githubharald/SimpleHTR) system.
 
 * Word threshold selection: Try different threshold methods and use the 'cleanest' method. See *Individual words* section for more details.
 
-* Colored pen considerations: Colored pen could be detected and extracted much more easily than pencil, however this isn't currently being taken advantage of.
+* Line compontent filtering: Some line images contain components which are quite clearly artifacts, so with some additional component analysis (and perhaps an F1 score) of a line's components, these components could be removed such that they aren't mistaken as words.
 
 * Improved scale-invariance: Some pre-processing steps are sensitive to image and text size, which should be accounted for in future developments. For example, the connected compontents area filtering is currently based on a fixed value, which will fail to work well with different sized images or text.
 
 * K-means clustering: Currently, a simple clustering method is being used based on a carefully-chosen 'maxgap' between lines. However, this could be improved, or augmented, with K-means clustering. E.g. use the current method to determine the approximate number of lines, and use K-means to improve the clustering - find missing lines or remove unncessary lines.
+
+* Colored pen considerations: Colored pen could be detected and extracted much more easily than pencil, however this isn't currently being taken advantage of.
