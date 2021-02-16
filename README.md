@@ -60,7 +60,7 @@ Credit to https://vzaguskin.github.io/fourielines1/ for this technique, which us
 ![lines_removed](./doc/3lines_removed.jpg)
 
 
-## Grayscale & Blurred
+## Grayscale & blurred
 
 The image is then made grayscale and blurred in preparation for `cv2.canny`.
 
