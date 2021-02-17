@@ -138,7 +138,7 @@ def main():
     parser.add_argument('image', type=str, help='Load image from path')
 
     # Optional arguments
-    parser.add_argument('-s', '--save', type=str, help='Save pre-processing images to path', default=None)
+    parser.add_argument('-s', '--save', type=str, help='Save path for images', default=None)
     parser.add_argument('-p', '--predict', help='Predict words in image (if implemented)',
                         action='store_true', default=False)
 
