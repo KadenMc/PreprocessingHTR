@@ -1,7 +1,4 @@
-import os
-import sys
 import argparse
-
 import numpy as np
 import cv2
 import math
@@ -14,6 +11,7 @@ import lineClustering
 import lineAnalysis
 
 class ImageAnalysis:
+    
     def __init__(self, img):
         self.img = img
 
@@ -26,21 +24,17 @@ class ImageAnalysis:
         self.dilate()
 
     # Demo the handwritting recogniction software
-    def demo(self, save=False, save_path=None, predict=True):
+    def get_words(self, save_path=None):
         self.preprocess()
-
         self.components, self.components_img = connectedComponentsProcessing.connected_components(self.dilated)
         self.line_components, self.line_img = lineClustering.line_clustering(self.components)
-        self.word_imgs, self.line_imgs = lineAnalysis.get_words_in_line(self.cleaned, self.dilated, self.components, self.line_components)
+        self.word_imgs, self.line_imgs = lineAnalysis.get_words_in_line(self.cleaned, self.dilated,
+                                                                        self.components, self.line_components)
 
-        if save:
+        if save_path is not None:
             self.save_images(save_path)
 
-        if predict:
-            text = self.get_text()
-            return text
-
-        return None
+        return self.word_imgs
 
     # Performs canny
     def edges(self):
@@ -68,45 +62,6 @@ class ImageAnalysis:
         
         return self.lines_removed
 
-    # NOTE: Change to work with your word prediction model
-    def get_model(self):
-        #curr_path = os.getcwd()
-        #sys.path.append(curr_path + '\..\SimpleHTR-master\src')
-        #import customInfer
-        #return customInfer.get_model(curr_path)
-        raise NotImplementedError
-
-    # NOTE: Change to work with your word prediction model
-    def predict_img(self, model, img):
-        #sys.path.append(os.getcwd() + '../SimpleHTR-master/src')
-        #import customInfer
-        #return customInfer.infer(model, img)
-        raise NotImplementedError
-
-    # NOTE: Change to work with your word prediction model
-    def get_text(self):
-        # Load word prediction model
-        model = self.get_model()
-        text = ''
-        for i, l in enumerate(self.word_imgs):
-            for j, w in enumerate(l):
-                # The model fails on some images for some unknown reason, so we can
-                # use an image which was thresholded differently which sometimes works
-                try:
-                    word, prob = self.predict_img(model, w[0])
-                    text += word + ' '
-                except:
-                    try:
-                        word, prob = self.predict_img(model, w[1])
-                        text += word + ' '
-                    except:
-                        print("Unable to predict word {0} on line {1}".format(i, j))
-            text += '\n'
-        return text[:-2]
-
-    # Saves an image
-    def save_image(self, img, label):
-        cv2.imwrite(label, img)
 
     # Saves pre-processing images
     def save_images(self, save_path):
@@ -131,27 +86,26 @@ class ImageAnalysis:
                 cv2.imwrite(save_path + "/word{}_{}.jpg".format(i, j), w[0])
                 cv2.imwrite(save_path + "/word{}_{}_backup.jpg".format(i, j), w[1])
 
-def main():
-    parser = argparse.ArgumentParser()
 
-    # Required arguments
-    parser.add_argument('image', type=str, help='Load image from path')
-
-    # Optional arguments
-    parser.add_argument('-s', '--save', type=str, help='Save path for images', default=None)
-    parser.add_argument('-p', '--predict', help='Predict words in image (if implemented)',
-                        action='store_true', default=False)
-
-    args = parser.parse_args()
+def preprocess(image_path, save_path):
 
     # Load the image
-    img = cv2.imread(args.image)
+    img = cv2.imread(image_path)
+
+    # Create ImageAnalysis class
     image_anlysis = ImageAnalysis(img)
 
-    pred = image_anlysis.demo(save=True, save_path='processed', predict=args.predict)
-    if args.predict:
-        print("Predicted:\n")
-        print(pred)
+    # Get word images
+    return image_anlysis.get_words(save_path=save_path)
+
 
 if __name__ == "__main__":
-    main()
+
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('image', type=str, help='Load image from path')
+    parser.add_argument('-s', '--save', type=str, help='Save path for images', default=None)
+    args = parser.parse_args()
+
+    # Get word images
+    word_imgs = preprocess(args.image, args.save)
