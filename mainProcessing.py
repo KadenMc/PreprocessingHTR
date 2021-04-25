@@ -23,7 +23,10 @@ def preprocess(image_path, save_path):
     # Get word images
     return image_anlysis.get_words(save_path=save_path)
 
-def img_resize(img, scale=0.5):
+def img_resize(img, scale=1):
+    if scale == 1:
+        return img
+    
     width = int(img.shape[1] * scale)
     height = int(img.shape[0] * scale)
     dsize = (width, height)
@@ -40,7 +43,9 @@ class ImageAnalysis:
         self.gray = cv2.cvtColor(self.cleaned, cv2.COLOR_BGR2GRAY)
         self.blurred = cv2.medianBlur(self.gray, 5)
         self.edges()
-        self.dilate()
+
+        #self.dilate()
+        self.dilated = self.edges
 
     # Demo the handwritting recogniction software
     def get_words(self, save_path=None):
@@ -91,11 +96,13 @@ class ImageAnalysis:
         cv2.imwrite(save_path + "/4gray.jpg", img_resize(self.gray))
         cv2.imwrite(save_path + "/5blurred.jpg", img_resize(self.blurred))
         cv2.imwrite(save_path + "/6edges.jpg", img_resize(self.edges))
-        cv2.imwrite(save_path + "/7dilated.jpg", img_resize(self.dilated))
+        #cv2.imwrite(save_path + "/7dilated.jpg", img_resize(self.dilated))
         cv2.imwrite(save_path + "/8components.jpg", img_resize(self.components_img))
-        cv2.imwrite(save_path + "/9components_filtered.jpg", img_resize(self.components.filtered))
-        cv2.imwrite(save_path + "/10components_borders.jpg", img_resize(self.components.borders))
-        cv2.imwrite(save_path + "/11lines_img.jpg", img_resize(self.line_img))
+        cv2.imwrite(save_path + "/9components_filtered1.jpg", img_resize(self.components.filtered1))
+        cv2.imwrite(save_path + "/10components_borders1.jpg", img_resize(self.components.borders1))
+        cv2.imwrite(save_path + "/11components_filtered2.jpg", img_resize(self.components.filtered2))
+        cv2.imwrite(save_path + "/12components_borders2.jpg", img_resize(self.components.borders2))
+        cv2.imwrite(save_path + "/13lines_img.jpg", img_resize(self.line_img))
 
         for i, l in enumerate(self.line_imgs):
             cv2.imwrite(save_path + "/line{}.jpg".format(i), self.line_imgs[i])

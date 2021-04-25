@@ -43,6 +43,7 @@ def space_detection(thresh, i):
 
     # Characterize certain consequtive runs of white columns as spaces
     # Get the start and end of each gap, except for those on the edge of the image, then get the ranges/middle of these gaps
+    consequtive_middle = []
     if len(consequtive[0]) > 0:
 
         consequtive = [(c[0], c[-1]) for c in consequtive if c[0]
