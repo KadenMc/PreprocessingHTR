@@ -218,7 +218,7 @@ In general, one is better than the other, but it is unpredictable, so we take bo
 Currently, once individual words are segmented, they're re-colored to be fed to [SimpleHTR](https://github.com/githubharald/SimpleHTR). This model was built on the IAM dataset, which requires images have very specific colors. The output images could just as easily be black and white.
 
 
-Here are a few words, the leftmost being image **(1)**, the rightmost being image **(2)**:
+Here are a few words, the left/top-most being image **(1)**, the right/bottom-most being image **(2)**:
 
 <img src="./doc//word0_0.jpg" alt="drawing" height="125"/>
 <img src="./doc//word0_0_backup.jpg" alt="drawing" height="125"/><br>
