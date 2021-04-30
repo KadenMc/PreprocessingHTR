@@ -52,6 +52,7 @@ class Components():
         self.width = self.stats[1:, 2]
         self.height = self.stats[1:, 3]
         self.area = self.stats[1:, 4]
+        self.bounding_area = self.width * self.height
         self.right = self.left + self.width
         self.bottom = self.top + self.height
 
@@ -91,7 +92,6 @@ class Components():
         self.filtered1 = np.zeros((self.img.shape))
 
         # Use bounding box area to get rid of noise/very small components
-        self.bounding_area = self.width*self.height
         allowed_area = np.argwhere(self.bounding_area > self.min_area)[:, 0]
 
 
@@ -179,9 +179,11 @@ class Components():
 
 
 # Creates connected components
-def connected_components(img, save=None):
-    # Create display image
-    display_img = show_connected_components(img)
+def connected_components(img, save=None, visualize=True):
+
+    if visualize:
+        # Create display image
+        display_img = show_connected_components(img)
     
     # Create components
     components = Components(img)

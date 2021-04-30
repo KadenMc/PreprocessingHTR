@@ -8,8 +8,7 @@ import lineRemoval
 import circleRemoval
 import connectedComponentsProcessing
 import lineClustering
-import lineAnalysis
-
+import wordAnalysis
 
 
 def preprocess(image_path, save_path):
@@ -52,8 +51,8 @@ class ImageAnalysis:
         self.preprocess()
         self.components, self.components_img = connectedComponentsProcessing.connected_components(self.dilated)
         self.line_components, self.line_img = lineClustering.line_clustering(self.components)
-        self.word_imgs, self.line_imgs = lineAnalysis.get_words_in_line(self.cleaned, self.dilated,
-                                                                        self.components, self.line_components)
+        self.word_imgs, self.line_imgs = wordAnalysis.get_words_in_line(self.cleaned, self.components,
+                                                                        self.line_components)
 
         if save_path is not None:
             self.save_images(save_path)
