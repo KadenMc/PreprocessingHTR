@@ -1,9 +1,16 @@
 import numpy as np
 import cv2
 
-# Crop to page border
-# Credit: https://stackoverflow.com/questions/60145395/crop-exact-document-paper-from-image-by-removing-black-border-from-photos-in-jav
+
 def page_border(img):
+    """
+    Crops an image of a page to the borders of said page.
+    Credit: https://stackoverflow.com/questions/60145395/crop-exact-document-paper-from-image-by-removing-black-border-from-photos-in-jav
+
+    Parameters:
+        img (np.ndarray): The image to border
+    """
+    # Blur the image
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gaussian_blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     thresh = cv2.threshold(
@@ -15,10 +22,13 @@ def page_border(img):
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
 
-    status = 1
+    error = True
     use_cnt = None
     display_cnt = None
     no_border = False
+
+    # Sorted by area, find the largest contour which is approximately rectangular
+    # Crop to this largest approximate rectangle
     for c in cnts:
         # Perform contour approximation
         peri = cv2.arcLength(c, True)
@@ -26,7 +36,7 @@ def page_border(img):
 
         # Check if a rectangle
         if len(approx) == 4:
-            status = 0
+            error = False
             display_cnt = approx.reshape(4, 2)
 
             x1 = display_cnt[0][0] if (display_cnt[0][0] > display_cnt[1][0]) else display_cnt[1][0]
@@ -37,8 +47,16 @@ def page_border(img):
             img = img[y1: y2, x1: x2]
             break
 
-    return status, img
+    return error, img
 
+
+
+'''
+
+All following functions are currently unused in this implementation.
+They are only being kept here for reference and future experimentation.
+
+'''
 
 def page_border_alternative(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -226,4 +244,3 @@ def crop_additional_border(img):
         return img[top:bottom, left:right]
     
     return img
-        

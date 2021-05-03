@@ -2,16 +2,22 @@ import numpy as np
 import cv2
 import math
 
-# Gets equidistant points on a circle (for color sampling)
+
 def get_equidistant_circle_points(r, num_points=8):
+    """Gets equidistant points on a circle."""
     points = []
     for index in range(num_points):
         points.append([r*math.cos((index*2*math.pi)/num_points),
                       r*math.sin((index*2*math.pi)/num_points)])
     return points
 
-# Removes circles (i.e. page holes)
-def circle_removal(img):
+
+def page_hole_removal(img):
+    """Removes page ring holes, should they exist.
+    
+    Parameters:
+        img (np.ndarray): The image for which to remove page holes.
+    """
     detector = cv2.SimpleBlobDetector_create()
     params = cv2.SimpleBlobDetector_Params()
 

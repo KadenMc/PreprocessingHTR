@@ -10,11 +10,14 @@ Periodically mentionned is the [SimpleHTR](https://github.com/githubharald/Simpl
 
 ## **Running**
 ```
-> python mainProcessing.py test.jpg --save processed_folder
+> python mainProcessing.py test.jpg --words words_folder --intermediate intermediate_folder
 ```
 ### Command line arguments
 * `image`: the path to the input image.
-* `--save`: the path to the folder where images of pre-processing steps may be saved.
+* `--words`: the path where word images should be saved.
+* `--intermediate`: the path where images of intermediate pre-processing steps should be saved.
+
+There are many intermediate images which may be saved; the primary use for this is debugging: If something fails, these images will illuminate where in the pipeline the issue occurred.
 
 ## **Assumptions**
 
@@ -250,4 +253,4 @@ Here are a few words, the left/top-most being image **(1)**, the right/bottom-mo
 
 ## **License & Credit**
 
-*This repository is licensed under the MIT License. If using this work, we would appreciate being given proper credit!*
+*This repository is licensed under the MIT License. If using this work, please give the proper credit.*

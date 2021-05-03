@@ -2,8 +2,8 @@ import numpy as np
 import cv2
 import math
 
-# Draw a border given coordinates
 def draw_border(img, border, col=255):
+    """Draw a border on an image given the border coordinates."""
     l, r, t, b = border
     cv2.line(img, (l, t), (l, b), col, 2)
     cv2.line(img, (l, t), (r, t), col, 2)
@@ -11,8 +11,14 @@ def draw_border(img, border, col=255):
     cv2.line(img, (r, t), (r, b), col, 2)
 
 
-# Displays connected components
 def show_connected_components(img):
+    """
+    Displays connected components colorfully.
+    Credit: https://stackoverflow.com/questions/46441893/connected-component-labeling-in-python
+    
+    Parameters:
+        img (np.ndarray): The image for which to show the connected components
+    """
     ret, labels = cv2.connectedComponents(img, connectivity=8)
     # Map component labels to hue val
     label_hue = np.uint8(179*labels/np.max(labels))
@@ -28,21 +34,38 @@ def show_connected_components(img):
     return labeled_img
 
 
-# Find groups of consequtive numbers
+
 def consecutive_groups(data, stepsize=1):
+    """Finds groups of consequtive numbers."""
     return np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
 
 
-# Get top k areas
-def mean_top_k_areas(areas, k=10):
+def mean_top_k(areas, k=10):
+    """Get mean of the top k elements."""
     top_k_vals = min([k, len(areas)])
     return (-np.sort(-areas))[:top_k_vals].mean()
 
 
-# Class for cv2's connected components
 class Components():
+    """
+    Class to organize connected components and related statistics.
+
+    Methods
+    -------
+    filter1():
+        Filters components based on height, horizontal ratio, and small area.
+
+    filter_strays(y):
+        Filters 'stray' components by according to y-value/closeness to other components.
+
+    filter2():
+        Filters components based on closeness to other components (stray) and smaller area.
+
+    filter(config):
+        Filters components.
+    """
+
     def __init__(self, img):
-        # Get connected compontents & related metrics
         self.img = img
         self.nb_components, self.output, self.stats, self.centroids = cv2.connectedComponentsWithStats(img, connectivity=8)
         self.nb_components -= 1
@@ -66,6 +89,7 @@ class Components():
         return len(self.x)
 
     def bounding_boxes(self):
+        """Draws bounding box for every component."""
         borders = np.zeros((self.img.shape[0], self.img.shape[1]), np.uint8)
         for i in range(len(self.x)):
             draw_border(borders, (self.left[i], self.right[i], self.top[i], self.bottom[i]), col=255)
@@ -74,6 +98,7 @@ class Components():
         return borders
 
     def filter_indices(self, allowed):
+        """Filters statistics by indices in allowed."""
         self.left = self.left[allowed]
         self.right = self.right[allowed]
         self.top = self.top[allowed]
@@ -86,10 +111,9 @@ class Components():
         self.bounding_area = self.bounding_area[allowed]
 
     def filter1(self):
-        
+        """Filters components based on height, horizontal ratio, and small area."""
         # Find minimum area under which we can delete components
-        self.min_area = mean_top_k_areas(self.area, k=15)/1.8
-        self.filtered1 = np.zeros((self.img.shape))
+        self.min_area = mean_top_k(self.area, k=15)/1.8
 
         # Use bounding box area to get rid of noise/very small components
         allowed_area = np.argwhere(self.bounding_area > self.min_area)[:, 0]
@@ -98,7 +122,7 @@ class Components():
         # The average paper has up to ~35 lines of text.
         # This divides the page into 35 lines, which implies that a text contour should have
         # height no more than img.height/35. To be generous, allow lines 3 times bigger than this
-        allowed_height = np.argwhere(self.height <= (self.filtered1.shape[0]/35)*3)[:, 0]
+        allowed_height = np.argwhere(self.height <= (self.img.shape[0]/35)*3)[:, 0]
         allowed = np.intersect1d(allowed_area, allowed_height)
 
         # Getting rid of the remnants of horizontal lines can be done via a height to width ratio
@@ -110,17 +134,9 @@ class Components():
         # we must track which components we're 'allowing', or keeping
         self.filter_indices(self.allowed)
 
-        # Draw connected components after filter1
-        for i in range(len(self.allowed)):
-            self.filtered1[self.output == self.allowed[i] + 1] = 255
 
-        # Draw bounding boxes after filter1
-        self.borders1 = self.bounding_boxes()
-
-
-    # Filters 'stray' connected components by analyzing their y-value closeness to other bounding boxes
     def filter_strays(self, y):
-        
+        """Filters 'stray' components by according to y-value/closeness to other components."""
         counts, boundaries = np.histogram(y, bins=40)
 
         # Find runs of non-zero counts
@@ -141,10 +157,9 @@ class Components():
 
 
     def filter2(self):
-        self.filtered2 = np.zeros((self.img.shape))
-
+        """Filters components based on closeness to other components (stray) and smaller area."""
         # Get components with 'small enough' area - (average of top k areas)/1.5
-        small_area_indices = np.argwhere(self.area <= mean_top_k_areas(self.area, k=15)/1.5)
+        small_area_indices = np.argwhere(self.area <= mean_top_k(self.area, k=15)/1.5)
 
         # Get stray components
         stray_indices = self.filter_strays(self.y)
@@ -160,35 +175,49 @@ class Components():
         # we must track which components we're 'allowing', or keeping
         self.filter_indices(allowed)
 
-        # Draw connected components after filter2
-        for i in range(len(self.allowed)):
-            self.filtered2[self.output == self.allowed[i] + 1] = 255
 
-        # Draw bounding boxes after filter2
-        self.borders2 = self.bounding_boxes()
-
-
-    def filter(self):
+    def filter(self, config):
+        """Filters components."""
         # Filters based on height, horizontal ratio, and very small area
         self.filter1()
 
+        # Draw connected components after filter1
+        self.filtered = np.zeros((self.img.shape))
+        for i in range(len(self.allowed)):
+            self.filtered[self.output == self.allowed[i] + 1] = 255
+
+        # Draw bounding boxes after filter1
+        self.borders = self.bounding_boxes()
+
+        # Save intermediate images
+        config['save_inter_func'](config, self.filtered, "components_filtered1")
+        config['save_inter_func'](config, self.borders, "components_borders1")
+
+
         # Filters based on closeness to other components (stray) and smaller area
         self.filter2()
+        
+        # Draw connected components after filter2
+        self.filtered = np.zeros((self.img.shape))
+        for i in range(len(self.allowed)):
+            self.filtered[self.output == self.allowed[i] + 1] = 255
 
+        # Draw bounding boxes after filter2
+        self.borders = self.bounding_boxes()
 
+        config['save_inter_func'](config, self.filtered, "components_filtered1")
+        config['save_inter_func'](config, self.borders, "components_borders1")
 
 
 # Creates connected components
-def connected_components(img, save=None, visualize=True):
-
-    if visualize:
-        # Create display image
-        display_img = show_connected_components(img)
+def connected_components(img, config):
+    """Create, visualize, filter, and return connected components."""
+    if config['inter']:
+        # Save a connected components display image
+        components_labeled_img = show_connected_components(img)
+        config['save_inter_func'](config, components_labeled_img, "components_labeled")
     
-    # Create components
+    # Create, filter, and return connected components
     components = Components(img)
-
-    # Filter components
-    components.filter()
-    
-    return components, display_img
+    components.filter(config)
+    return components

@@ -63,16 +63,11 @@ def remove_vertical_components(components, ind):
     return ind[np.argwhere(h/w < 7)[:, 0]]
 
 
-def clean_line_thresh(img, visualize=False, consider_location=True, area_multiplier=1):
+def clean_line_thresh(img, consider_location=True, area_multiplier=1):
     """Cleans a thresholded image using morphing and connected components."""
-    if visualize:
-        cv2.imshow('img', img)
 
     kernel = np.ones((2, 2), np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel, iterations=2)
-
-    if visualize:
-        cv2.imshow('Noise removed', img)
 
     # Remove smallest components with connected component analysis
     import connectedComponentsProcessing as ccp
@@ -94,11 +89,11 @@ def clean_line_thresh(img, visualize=False, consider_location=True, area_multipl
         # Squash this into a proportion
         dist = dist/max([y_weighted_mean, img.shape[0] - y_weighted_mean])
         
-        min_area = ccp.mean_top_k_areas(components.area, k=15)/8
+        min_area = ccp.mean_top_k(components.area, k=15)/8
         allowed = np.argwhere(((1 - dist)**2)*components.bounding_area > min_area * area_multiplier)[:, 0]
     else:
 
-        min_area = ccp.mean_top_k_areas(components.area, k=15)/3
+        min_area = ccp.mean_top_k(components.area, k=15)/3
         allowed = np.argwhere(components.bounding_area > min_area * area_multiplier)[:, 0]
 
     img = np.zeros((img.shape))
@@ -160,14 +155,10 @@ def get_sums(img):
     return np.invert(((255-img).sum(axis=0)).astype(np.bool))
 
 
-def get_gaps(img, degree_slant=30, visualize=False):
+def get_gaps(img, degree_slant=30):
     """Gets gaps in an image, a slanted verion of the image, and the intersection of those gaps."""
     height = img.shape[0]
     width = img.shape[1]
-
-    if visualize:
-        #cv2.imwrite('line_img.png', img)
-        cv2.imshow('img', img)
 
     # Get gaps in image
     if len(img.shape) == 3:
@@ -176,9 +167,7 @@ def get_gaps(img, degree_slant=30, visualize=False):
     sums = get_sums(img.astype(np.uint8))
     gaps = get_gap_from_sums(sums, img)
 
-    if visualize:
-        line_img = np.tile(sums.astype(np.uint8)*255, (100, 1))
-        cv2.imshow("img_line", line_img)
+    #cv2.imshow("img_line", np.tile(sums.astype(np.uint8)*255, (100, 1)))
 
     # Get gaps in slanted image - image is slanted theta degrees
     # This is very necessary for people who write with a forward slant
@@ -188,15 +177,11 @@ def get_gaps(img, degree_slant=30, visualize=False):
         hyp = int(np.round(i*np.tan(theta)))
         rolled[i, :] = roll_zero_pad(rolled[i, :], hyp)
 
-    if visualize:
-        #cv2.imwrite('slanted_line_img.png', rolled)
-        cv2.imshow('rolled', rolled)
+    '''cv2.imshow('rolled', rolled)'''
 
     sums_slanted = get_sums(rolled)
 
-    if visualize:
-        line_img = np.tile(sums_slanted.astype(np.uint8)*255, (100, 1))
-        cv2.imshow("sums_slanted", line_img)
+    #cv2.imshow("sums_slanted", np.tile(sums_slanted.astype(np.uint8)*255, (100, 1)))
 
     # Shift slanted image - Slanted 45 degree line '/'. Calculate the subtraction to
     # bring the gaps back in line with those original image
@@ -204,17 +189,13 @@ def get_gaps(img, degree_slant=30, visualize=False):
     sums_slanted = roll_zero_pad(sums_slanted, -subtract)
     gaps_slanted = get_gap_from_sums(sums_slanted, rolled)
 
-    if visualize:
-        line_img = np.tile(sums_slanted.astype(np.uint8)*255, (100, 1))
-        cv2.imshow("sums_slanted-subtracted", line_img)
+    #cv2.imshow("sums_slanted-subtracted", np.tile(sums_slanted.astype(np.uint8)*255, (100, 1)))
 
     # Get intersection of gaps in the image and the slanted image
     sums_both = (np.logical_and(sums_slanted.astype(np.bool), sums.astype(np.bool)))
     gaps_both = get_gap_from_sums(sums_both, img)
 
-    if visualize:
-        line_img = np.tile(sums_both.astype(np.uint8)*255, (100, 1))
-        cv2.imshow("both_line", line_img)
+    #cv2.imshow("both_line", np.tile(sums_both.astype(np.uint8)*255, (100, 1)))
 
     return gaps, gaps_slanted, gaps_both
 
@@ -289,7 +270,7 @@ def filter_middles(gaps, min_gap):
     return [m for i, m in enumerate(middles) if ranges[i] > min_gap]
 
 
-def get_middle(img, gaps, gaps_slanted, gaps_both, min_gap, visualize=False):
+def get_middle(img, gaps, gaps_slanted, gaps_both, min_gap):
     """Calculates reasonable space dividers in a line (middles) provided its gaps."""
     # Get middles
     middles = filter_middles(gaps, min_gap)
@@ -323,7 +304,7 @@ def get_middle(img, gaps, gaps_slanted, gaps_both, min_gap, visualize=False):
     merge_count = 1
     middles_final = []
     for i in range(1, len(middles_merged)):
-        if middles_merged[i] - middles_merged[i - 1] < 40:
+        if middles_merged[i] - middles_merged[i - 1] < min_gap:
             merge_sum += middles_merged[i]
             merge_count += 1
         else:
@@ -337,15 +318,12 @@ def get_middle(img, gaps, gaps_slanted, gaps_both, min_gap, visualize=False):
         display_img = cv2.line(display_img, (c-4, 0), (c-4, display_img.shape[0]), 0, 2)
         display_img = cv2.line(display_img, (c+4, 0), (c+4, display_img.shape[0]), 0, 2)
 
-    if visualize:
-        cv2.imshow('img_after', img)
-
     return middles_final, display_img, img
 
 
 class Line():
     '''Holds information about, and performs operations on an image of a text line.'''
-    def __init__(self, components, line, img, visualize=False):
+    def __init__(self, components, line, img, config):
 
         self.line_org = line
         self.components = components
@@ -371,52 +349,58 @@ class Line():
             self.comp_img[self.components.output == self.components.allowed[j] + 1] = 255
         self.comp_img = cv2.bitwise_not(self.comp_img[self.top:self.bottom, self.left:self.right].astype(np.uint8))
 
+        config['save_inter_func'](config, self.comp_img, "line_comp")
+
         # Create a (multiple) thresholded image
         self.thresh_img = cv2.cvtColor(img[self.top:self.bottom, self.left:self.right], cv2.COLOR_BGR2GRAY)
         self.thresh_img = threshold_multiple_line(self.thresh_img, threshold_mean, img.shape[1])
-        self.thresh_img = clean_line_thresh(self.thresh_img, visualize=False)
+        self.thresh_img = clean_line_thresh(self.thresh_img)
+
+        config['save_inter_func'](config, self.thresh_img, "line_thresh")
 
         # Calculate gaps for connected components and thresholded images
-        self.gaps, self.gaps_slanted, self.gaps_both = get_gaps(self.comp_img, visualize=False)
-        self.gaps_thresh, self.gaps_slanted_thresh, self.gaps_both_thresh = get_gaps(self.thresh_img,
-                                                                                     visualize=False)
-
-        #cv2.imshow('comp', self.comp_img)
-        #cv2.imshow('thresh', self.thresh_img)
-        #cv2.waitKey(0)
+        self.gaps, self.gaps_slanted, self.gaps_both = get_gaps(self.comp_img)
+        self.gaps_thresh, self.gaps_slanted_thresh, self.gaps_both_thresh = get_gaps(self.thresh_img)
 
 
-    def get_middles(self, min_gap):
+    def get_middles(self, min_gap, config):
         '''Get space dividers (middles) for the line.'''
         # Get middles for components
-        self.middles, _, _ = get_middle(self.comp_img, self.gaps, self.gaps_slanted,
-                                            self.gaps_both, min_gap, visualize=False)
+        self.middles, display_img, thresh = get_middle(self.comp_img, self.gaps, self.gaps_slanted,
+                                            self.gaps_both, min_gap)
+
+        for m in self.middles:
+            display_img = cv2.line(display_img, (m, 0), \
+                                   (m, display_img.shape[0]), (0, 255, 0), 3)
+        config['save_inter_func'](config, display_img, "line_separated1")
 
         # Get middles for thresholded
         self.middles_thresh, display_img, thresh = get_middle(self.thresh_img, self.gaps_thresh,
                                                           self.gaps_slanted_thresh, self.gaps_both_thresh,
-                                                          min_gap, visualize=False)
+                                                          min_gap)
+
+        for m in self.middles_thresh:
+            display_img = cv2.line(display_img, (m, 0), \
+                                   (m, display_img.shape[0]), (0, 255, 0), 3)
+        config['save_inter_func'](config, display_img, "line_separated2")
 
         # If the thresholded image doesn't have a line where the components image does, it should be removed
         # This is because the thresholded image has less missing text, so middles could created via missing text
         middles_final = get_middle_delete_unmatched(self.middles, self.middles_thresh, min_gap)
 
-
+        display_img = thresh.copy()
         for m in middles_final:
             display_img = cv2.line(display_img, (m, 0), \
                                    (m, display_img.shape[0]), (0, 255, 0), 3)
+        config['save_inter_func'](config, display_img, "line_separated_final")
 
-        return middles_final, display_img, thresh
+        return middles_final, thresh
 
 
-    def crop_words(self, img, min_gap, visualize=False):
+    def crop_words(self, img, min_gap, config):
         '''Segments a line image into word images.'''
-        self.middles_final, display_img, thresh = self.get_middles(min_gap)
+        self.middles_final, thresh = self.get_middles(min_gap, config)
         words = []
-
-        #cv2.imshow('di', display_img)
-        #cv2.waitKey(0)
-
 
         # If there is no gaps, create just one word
         if len(self.middles_final) == 0:
@@ -466,23 +450,16 @@ class Line():
                 word2[word2 == 255] = 232
                 
                 words.append([word1, word2])
-
-                if visualize:
-                    cv2.imshow('word1', word1)
-                    cv2.imshow('word2', word2)
-                    
-        if visualize:
-            cv2.imshow('display_img', display_img)
-
-        return words, display_img
+                
+        return words
 
 
-def get_words_in_line(img, components, line_components, visualize=False):
+def get_words_in_line(img, components, line_components, config):
     '''Segments a line image into word images.'''
     # Process each line
     lines = []
     for i, line in enumerate(line_components):
-        line_obj = Line(components, line, img)
+        line_obj = Line(components, line, img, config)
         if line_obj.valid:
             lines.append(line_obj)
 
@@ -490,13 +467,9 @@ def get_words_in_line(img, components, line_components, visualize=False):
     min_gap = get_min_gap(lines, img.shape[1])
 
     # Crop lines into words
-    line_imgs = []
     words = []
     for i in range(len(lines)):
-
-        w, display_img = lines[i].crop_words(img, min_gap, visualize=visualize)
-        line_imgs.append(display_img)
+        w = lines[i].crop_words(img, min_gap, config)
         words.append(w)
-        
 
-    return words, line_imgs
+    return words

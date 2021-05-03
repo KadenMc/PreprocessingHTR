@@ -1,13 +1,20 @@
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 
 
 def piecewise_linear(x, x0, y0, k1, k2):
+    """Define a piecewise, lienar function with two line segments."""
     return np.piecewise(x, [x < x0], [lambda x:k1*x + y0-k1*x0, lambda x:k2*x + y0-k2*x0])
 
 
-def determine_components_n(Ms, lower_bounds, all_means, visualize=False):
-    """Lower bounds looks somewhat like a piecewise function with 2 lines
+def determine_components_n(Ms, lower_bounds, all_means, config):
+    """Determine the optimal number of GMM components based on loss."""
+
+    """
+    Explanation:
+    
+    Lower bounds looks somewhat like a piecewise function with 2 lines
     The changepoint from one line to another tends to be the correct
     number of GMM components!
 
@@ -18,35 +25,27 @@ def determine_components_n(Ms, lower_bounds, all_means, visualize=False):
     fitting a piecewise, 2-line function with scipy.optimize.curve_fit
     For whatever reason, method='trf' works best!
     """
+
     x = np.array([float(i) for i in range(len(lower_bounds))])
     y = np.array(lower_bounds)
 
     from scipy import optimize
     p, e = optimize.curve_fit(piecewise_linear, x, y, method='trf')
 
-    if visualize:
-        import matplotlib.pyplot as plt
-        # p[0] is the changepoint parameter
-        print("Should equal the number of lines:", int(np.round(p[0])) + 1)
-        plt.figure(0)
+    if config['inter']:
         plt.xlabel('components')
         plt.ylabel('lower_bounds')
         plt.plot(x, y, 'o')
         x = np.linspace(x.min(), x.max(), 1000)
         plt.plot(x, piecewise_linear(x, *p))
-        plt.savefig('processed/13.5gmm_components.png')
-        plt.show()
+        config['save_inter_func'](config, None, "gmm_components", plot=True)
 
     # p[0] is the changepoint parameter
     return int(np.round(p[0])) + 1
     
 
-# Uses a GMM to cluster lines based on y values
-# Still needs to be made smarter by selectively picking number of GMM components
-def gmm_clustering(cY, components):
-    
-    # Determine number of components in the GMM (i.e. number of lines)
-    #import matplotlib.pyplot as plt
+def gmm_clustering(cY, components, config):
+    """Uses GMM models to cluster text lines based on their y values."""
     from sklearn.mixture import GaussianMixture
     Ms = list(range(1, 30))
 
@@ -67,7 +66,7 @@ def gmm_clustering(cY, components):
 
 
     # Different methods for selecting the number of components
-    n = determine_components_n(Ms, lower_bounds, all_means)
+    n = determine_components_n(Ms, lower_bounds, all_means, config)
 
     # Perform analysis with determined number of components n
     gmm = GaussianMixture(n_components=n, random_state=0).fit(np.expand_dims(cY, 1))
@@ -76,19 +75,8 @@ def gmm_clustering(cY, components):
     return cluster_means
 
 
-# Arrange data into groups where successive elements differ by no more than maxgap (Assumes data is sorted)
-def simple_clustering(data, maxgap):
-    groups = [[data[0]]]
-    for i, x in enumerate(data[1:]):
-        if abs(x - groups[-1][-1]) <= maxgap:
-            groups[-1].append(x)
-        else:
-            groups.append([x])
-    return [int(sum(g)/len(g)) for g in groups]
-
-
-# Clusters objects into horizontal lines
-def line_clustering(components):
+def line_clustering(components, config):
+    """Clusters components into horizontal lines."""
 
     # Organize and sort component data by y values
     c_area = components.area
@@ -103,13 +91,8 @@ def line_clustering(components):
     boundingRect = boundingRect[sorted_indices]
     mean_height = boundingRect[:, 3].mean()
 
-
     # Perform GMM analysis to determine lines based on y values
-    cluster_means = gmm_clustering(cY, components)
-
-    # Cluster the bounding boxes together - OLD METHOD
-    #clusters = list(simple_clustering(list(cY), mean_height/1.5))
-    #cluster_means = [int(sum(c)/len(c)) for c in clusters]
+    cluster_means = gmm_clustering(cY, components, config)
     
     # Now that we've found the cluster y values, assign components to each cluster based on y
     component_clusters = np.zeros(len(components))
@@ -152,4 +135,6 @@ def line_clustering(components):
         cv2.line(keep_components, (0, cluster_means[i]), (
             keep_components.shape[1], cluster_means[i]), 255, 3)
 
-    return line_components, keep_components
+    config['save_inter_func'](config, keep_components, "lines")
+
+    return line_components
