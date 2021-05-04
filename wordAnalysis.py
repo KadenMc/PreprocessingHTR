@@ -321,11 +321,58 @@ def get_middle(img, gaps, gaps_slanted, gaps_both, min_gap):
     return middles_final, display_img, img
 
 
-class Line():
-    '''Holds information about, and performs operations on an image of a text line.'''
-    def __init__(self, components, line, img, config):
+class Word():
+    """
+    Holds information about a word in the text.
 
-        self.line_org = line
+    Attributes
+    ----------
+    left : int
+        The left border of the word in the image.
+    right : int
+        The right border of the word in the image.
+    top : int
+        The top border of the word in the image.
+    bottom : int
+        The bottom border of the word in the image.
+    words : list[np.ndarray]
+        A list of images of the word.
+    """
+
+    def __init__(self, images, left, right, top, bottom):
+        self.images = images
+        self.left = left
+        self.right = right
+        self.top = top
+        self.bottom = bottom
+
+class Line():
+    """
+    Holds information about (and performs operations on) a line of text.
+
+    Attributes
+    ----------
+    left : int
+        The left border of the line in the image.
+    right : int
+        The right border of the line in the image.
+    top : int
+        The top border of the line in the image.
+    bottom : int
+        The bottom border of the line in the image.
+    words : list[Word]
+        A list of Word objects containing information about each word.
+
+    Methods
+    -------
+    get_middles():
+        Get space dividers (middles) for the line.
+    
+    crop_words():
+        Segments a line image into word images.
+    """
+
+    def __init__(self, components, line, img, config):
         self.components = components
 
         # Remove artifact components which are easier to detect in the context of a line
@@ -400,7 +447,7 @@ class Line():
     def crop_words(self, img, min_gap, config):
         '''Segments a line image into word images.'''
         self.middles_final, thresh = self.get_middles(min_gap, config)
-        words = []
+        self.words = []
 
         # If there is no gaps, create just one word
         if len(self.middles_final) == 0:
@@ -449,9 +496,7 @@ class Line():
                 word2[word2 == 0] = 155
                 word2[word2 == 255] = 232
                 
-                words.append([word1, word2])
-                
-        return words
+                self.words.append(Word([word1, word2], l, r, t, b))
 
 
 def get_words_in_line(img, components, line_components, config):
@@ -469,7 +514,6 @@ def get_words_in_line(img, components, line_components, config):
     # Crop lines into words
     words = []
     for i in range(len(lines)):
-        w = lines[i].crop_words(img, min_gap, config)
-        words.append(w)
+        lines[i].crop_words(img, min_gap, config)
 
-    return words
+    return lines

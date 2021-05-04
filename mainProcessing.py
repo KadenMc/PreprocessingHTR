@@ -19,9 +19,19 @@ def img_resize(img, scale):
     return cv2.resize(img, dsize)
 
 
-def get_canny(img, c=(40, 50), apertureSize=3):
-    """Perform canny edge detection."""
-    return cv2.Canny(img, c[0], c[1], apertureSize=apertureSize)
+def restricted_float(x):
+    """
+    Takes an argparsed argument x and ensures it is a float in the range (0, 1].
+    Credit: https://stackoverflow.com/questions/12116685/how-can-i-require-my-python-scripts-argument-to-be-a-float-between-0-0-1-0-usin
+    """
+    try:
+        x = float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
+
+    if x <= 0.0 or x > 1.0:
+        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    return x
 
 
 def save_intermediate_img(config, img, name, plot=False):
@@ -38,9 +48,14 @@ def save_intermediate_img(config, img, name, plot=False):
         config['inter_saved'] += 1
 
 
-class PreprocessingPipeline:
+def get_canny(img, c=(40, 50), apertureSize=3):
+    """Perform canny edge detection."""
+    return cv2.Canny(img, c[0], c[1], apertureSize=apertureSize)
+
+
+class ProcessedPage:
     """
-    A class to handle the preprocessing pipeline.
+    A class to handle the preprocessing pipeline and final output.
 
     Attributes
     ----------
@@ -52,6 +67,8 @@ class PreprocessingPipeline:
         A cleaned image of img.
     canny : np.ndarray
         A canny edges image of cleaned.
+    lines : list[Line]
+        A list of Line objects containing information about each line.
 
     Methods
     -------
@@ -62,7 +79,7 @@ class PreprocessingPipeline:
         Cleans the image by bordering it and removing any page holes/lines.
 
     get_words():
-        Creates and returns word images.
+        Creates lines and word classes and images.
     """
 
     def __init__(self, config):
@@ -70,6 +87,7 @@ class PreprocessingPipeline:
         self.img = cv2.imread(config['image'])
         self.config['save_inter_func'](self.config, self.img, "img")
         self.cleaned, self.canny = self.preprocess_page()
+        self.get_words()
 
 
     def preprocess_page(self):
@@ -115,23 +133,20 @@ class PreprocessingPipeline:
 
     def get_words(self):
         """Creates and returns word images."""
-        self.components = connectedComponentsProcessing.connected_components(self.canny, self.config)
-        self.line_components = lineClustering.line_clustering(self.components, self.config)
-        self.word_imgs = wordAnalysis.get_words_in_line(self.cleaned, self.components, \
-            self.line_components, self.config)
+        components = connectedComponentsProcessing.connected_components(self.canny, self.config)
+        line_components = lineClustering.line_clustering(components, self.config)
+        self.lines = wordAnalysis.get_words_in_line(self.cleaned, components, \
+            line_components, self.config)
 
-        
+        # To save all word images, iterate lines, words in a line, and images corresponding to a word
         if self.config['words_path'] is not None:
-            for i, l in enumerate(self.word_imgs):
-                for j, w in enumerate(l):
-                    cv2.imwrite(self.config['words_path'] + "/word{}_{}-1.jpg".format(i, j), w[0])
-                    cv2.imwrite(self.config['words_path'] + "/word{}_{}-2.jpg".format(i, j), w[1])
+            for i, line in enumerate(self.lines):
+                for j, word in enumerate(line.words):
+                    for k, img in enumerate(word.images):
+                        cv2.imwrite(self.config['words_path'] + "/word{}_{}-{}.jpg".format(i, j, k), img)
 
 
-        return self.word_imgs
-
-
-def preprocess(image_path, words_path, intermediate_path=None):
+def preprocess(image_path, words_path, intermediate_path, scale=1):
     """
     Preprocess an image and return the word images.
 
@@ -145,25 +160,10 @@ def preprocess(image_path, words_path, intermediate_path=None):
     """
     config = dict({'image': image_path, 'words_path': words_path, \
         'inter_path': intermediate_path, 'inter_saved': 0, \
-        'inter': intermediate_path != None, 'inter_scale': args.scale, \
+        'inter': intermediate_path != None, 'inter_scale': scale, \
         'save_inter_func': save_intermediate_img})
 
-    pipeline = PreprocessingPipeline(config)
-    return pipeline.get_words()
-
-def restricted_float(x):
-    """
-    Takes an argparsed argument x and ensures it is a float in the range (0, 1].
-    Credit: https://stackoverflow.com/questions/12116685/how-can-i-require-my-python-scripts-argument-to-be-a-float-between-0-0-1-0-usin
-    """
-    try:
-        x = float(x)
-    except ValueError:
-        raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
-
-    if x <= 0.0 or x > 1.0:
-        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
-    return x
+    return ProcessedPage(config)
 
 
 if __name__ == "__main__":
@@ -182,4 +182,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Get word images
-    word_imgs = preprocess(args.image, args.words, args.intermediate)
+    processed = preprocess(args.image, args.words, args.intermediate, scale=args.scale)

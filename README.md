@@ -1,6 +1,6 @@
 # **PreprocessingHTR**
 
-This pre-processing system takes an image of a full, handwritten page and returns cleaned images of individual words separated by line. These images can be fed to Handwritten Text Recognition (HTR) systems, which often accept individual word images.
+This pre-processing system takes an image of a full, handwritten page and returns a class containing pertinent information about the page (much more information on this is available under the section **Usage**). Particularly useful are the images of individual words, since these images can be fed to Handwritten Text Recognition (HTR) systems.
 
 Periodically mentionned is the [SimpleHTR](https://github.com/githubharald/SimpleHTR) system, a handwritten text recognition model. This pre-processing tailors the color of the word images to perform well with this model, but it's applicable to all HTR systems.
 
@@ -8,16 +8,104 @@ Periodically mentionned is the [SimpleHTR](https://github.com/githubharald/Simpl
 
 <img src="./doc//word0_0_backup.jpg" alt="drawing" height="125"/>
 
-## **Running**
+## **Usage**
+
+*Please note that this implementation is still in early development. It is complete, but not particularly efficient nor robust.*
+
 ```
 > python mainProcessing.py test.jpg --words words_folder --intermediate intermediate_folder
 ```
-### Command line arguments
+### **Command line arguments**
 * `image`: the path to the input image.
 * `--words`: the path where word images should be saved.
 * `--intermediate`: the path where images of intermediate pre-processing steps should be saved.
+* `--scale`: the decimal percent scale at which the intermediate images should be saved.
 
 There are many intermediate images which may be saved; the primary use for this is debugging: If something fails, these images will illuminate where in the pipeline the issue occurred.
+
+### **Output**
+
+The output of the program consists of three nested classes: `ProcessedPage`, `Line`, and `Word`. Below is the relevant documentation to handle this output.
+```
+class ProcessedPage:
+    """
+    A class to handle the preprocessing pipeline and final output.
+
+    Attributes
+    ----------
+    config : dict
+        A dictionary describing a data loading/saving configuration.
+    img : np.ndarray
+        The original image loaded from file.
+    cleaned : np.ndarray
+        A cleaned image of img.
+    canny : np.ndarray
+        A canny edges image of cleaned.
+    lines : list[Line]
+        A list of Line objects containing information about each line.
+    """
+```
+
+```
+class Line():
+    """Holds information about (and performs operations on) a line of text.
+
+    Attributes
+    ----------
+    left : int
+        The left border of the line in the image.
+    right : int
+        The right border of the line  in the image.
+    top : int
+        The top border of the line  in the image.
+    bottom : int
+        The bottom border of the line  in the image.
+    words : list[Word]
+        A list of Word objects containing information about each word.
+    """
+```
+
+```
+class Word():
+    """
+    Holds information about a word in the text.
+
+    Attributes
+    ----------
+    left : int
+        The left border of the word in the image.
+    right : int
+        The right border of the word in the image.
+    top : int
+        The top border of the word in the image.
+    bottom : int
+        The bottom border of the word in the image.
+    words : list[np.ndarray]
+        A list of images of the word.
+    """
+```
+
+Here is functioning code to iterating through all available word images, separated by line and word:
+
+```
+import numpy as np
+import cv2
+
+import mainProcessing
+processed = mainProcessing.preprocess(image_path, word_save_path, None)
+
+# Iterate over the lines of text
+for i, line in enumerate(processed.lines):
+
+    # Iterate over the words in a line of text
+    for j, word in enumerate(line.words):
+
+        # Iterate over the word images of a word
+        for k, img in enumerate(word.images):
+
+            cv2.imshow('img', img)
+            cv2.waitKey(0)
+```
 
 ## **Assumptions**
 
@@ -208,7 +296,7 @@ Multiple OTSU thresholding with cleaning
 
 Once the spaces have been detected, the words are cropped by assigning each component in the line to a word image. This also ensures there's no horizontal overlap between words – at least for one of the two word images.
 
-Two separate, thresholded images are produced for each word. 
+Currently, two separate, thresholded images are produced for each word – although, in its current implementation, the program can support any number of images per word.
 
 - **(1)** One is cropped from the thresholded line image created by the space detection algorithm, although this was filtered 'well' for noise to allow for uninterrupted gaps, and this may have removed some letter segments.
 
@@ -237,8 +325,6 @@ Here are a few words, the left/top-most being image **(1)**, the right/bottom-mo
 
 
 ## **Current Shortcomings // Future Improvements**
-
-* Formal documentation: Add more formal documentation & improve the image saving system
 
 * Bordering: A future improvement will both straighten the image and avoid warping.
 
